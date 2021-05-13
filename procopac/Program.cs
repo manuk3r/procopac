@@ -25,51 +25,64 @@ namespace procopac
         {
             if (args.Length < 2)
             {
-                Console.WriteLine("Usage: \nprocopac [procname] [opacity]\n" +
-                    "[procname] should be the executable name without the '.exe' extension\n" +
+                Console.WriteLine("Usage: \nprocopac [procname/PID] [opacity]\n" +
+                    "[procname/PID] should be the executable name without the '.exe' extension\n" +
                     "[opacity] should be an integer number between 40 and 255");
                 return;
             }
 
+            Process p;
+
             //1st arg
-            byte Out;
-            bool Convert = byte.TryParse(args[0], out Out);
+            int iOut;
+            bool Convert = int.TryParse(args[0], out iOut);
 
             if (Convert)
             {
-                Console.WriteLine("First argument [procname] should not be numeric");
-                return;
+                try
+                {
+                    p = Process.GetProcessById(iOut);
+                }
+                catch
+                {
+                    Console.WriteLine("No processes found with PID '{0}'", args[0]);
+                    return;
+                }
             }
-
-            Process[] p = Process.GetProcessesByName(args[0]);
-            if (p.Length == 0)
+            else
             {
-                Console.WriteLine("No processes found named '{0}'", args[0]);
-                return;
-            }
+                Process[] ps = Process.GetProcessesByName(args[0]);
+                if (ps.Length == 0)
+                {
+                    Console.WriteLine("No processes found named '{0}'", args[0]);
+                    return;
+                }
 
-            if (p.Length > 1)
-            {
-                Console.WriteLine("Many processes found named '{0}'", args[0]);
-                return;
+                if (ps.Length > 1)
+                {
+                    Console.WriteLine("Many processes found named '{0}'", args[0]);
+                    return;
+                }
+
+                p = ps[0];
             }
 
             //2nd arg
-            Convert = byte.TryParse(args[1], out Out);
+            byte bOut;
+            Convert = byte.TryParse(args[1], out bOut);
 
-            if (!Convert || Out < 40)
+            if (!Convert || bOut < 40)
             {
                 Console.WriteLine("Second argument [opacity] should be a numeric value between 40 and 255");
                 return;
             }
 
-            IntPtr hwnd = IntPtr.Zero;
             try
             {
-                hwnd = p[0].MainWindowHandle;
+                IntPtr hwnd = p.MainWindowHandle;
                 int windowLong = GetWindowLong(hwnd, GwlExstyle);
                 SetWindowLong(hwnd, GwlExstyle, windowLong | WsExLayered);
-                SetLayeredWindowAttributes(hwnd, 0, Out, LwaAlpha);
+                SetLayeredWindowAttributes(hwnd, 0, bOut, LwaAlpha);
                 Console.WriteLine("Setting opacity succeeded");
                 return;
             }
